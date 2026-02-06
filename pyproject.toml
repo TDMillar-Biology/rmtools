@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rmtools"
+version = "0.1.0"
+description = "RepeatMasker normalization and plotting tools"
+dependencies = ["pandas", "matplotlib"]
+
+[project.scripts]
+rmtools = "rmtools.cli:main"
