@@ -193,3 +193,7 @@ PROJECT STATUS
 rmtools is an actively developed research tool. Interfaces and internal APIs may evolve as new diagnostics and plotting modes are added.
 
 The focus is on correctness, interpretability, and reproducibility rather than long-term backward compatibility at this stage.
+
+
+
+
