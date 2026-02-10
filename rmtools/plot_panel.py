@@ -14,9 +14,10 @@ from .universal import parse_region
 from .rm_track import (
     load_data as load_rm,
     choose_taxonomy,
-    bin_intervals,
+    bin_intervals_repeat_composition,
     plot_binned,
     make_color_map,
+    add_legend,
 )
 from .depth_track import load_depth, subset_depth, plot_depth
 from .agp_track import load_agp, subset_agp, plot_agp_layers
@@ -114,10 +115,12 @@ def plot_panel(
         categories = taxonomy_col.unique()
         color_map = make_color_map(categories)
 
-        binned = bin_intervals(df, taxonomy_col, rm_bin_size)
+        binned = bin_intervals_repeat_composition(df, taxonomy_col, rm_bin_size)
         plot_binned(binned, ax_map["rm"], color_map)
 
         ax_map["rm"].set_ylabel("Repeats")
+
+        add_legend(ax_map["rm"], color_map, title="Repeat class")
 
     # --------------------------------------------------------
     # Depth track
@@ -173,6 +176,7 @@ def run_from_cli(args):
         rm_bin_size=args.rm_bin,
         depth_bin_size=args.depth_bin,
     )
+
 
     plt.savefig(args.out, dpi=300, bbox_inches="tight")
     plt.close()

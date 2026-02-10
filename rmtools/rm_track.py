@@ -10,6 +10,7 @@ from collections import defaultdict
 from matplotlib.patches import Patch
 from matplotlib import ticker as mticker
 from .universal import parse_region
+import pdb
 
 def load_data(path: Path, contig: str):
     df = pd.read_csv(path, sep="\t")
@@ -84,6 +85,10 @@ def bin_intervals(df, taxonomy_col, bin_size):
 
 
 def plot_binned(df_bins, ax, color_map):
+    '''
+    Taxon below refers to a named repeat class, family, unit in the taxonomy
+    Not sure if that's the correct way to name that entity
+    '''
     taxa = df_bins["taxonomy"].unique()
     taxon_order = [t for t in taxa if t != "Unannotated"] + ["Unannotated"]
 
@@ -124,6 +129,7 @@ def make_color_map(categories, cmap=plt.cm.tab20):
     """
     Assign a consistent color to each taxonomy category.
     """
+    categories = sorted(categories)
     color_map = {cat: cmap(i % cmap.N) for i, cat in enumerate(categories)}
     color_map["Unannotated"] = '#E6E6E6' ## just off white
     return color_map
@@ -154,6 +160,7 @@ def merge_intervals(intervals):
 def clip_intervals_to_bin(df, taxonomy_col, bin_start, bin_end):
     """
     Return list of (start, end, taxonomy) clipped to bin boundaries.
+    Handles the case of an annotation whose boundaries cannot be contained in a single bin
     """
     clipped = []
 
@@ -169,7 +176,7 @@ def clip_intervals_to_bin(df, taxonomy_col, bin_start, bin_end):
 def bin_intervals_dominant(df, taxonomy_col, bin_size):
     """
     Bin intervals by dominant repeat class with exclusive base accounting.
-
+    FREQUENTLY VIOLATED ASSUMPTION -- rm output doesnt overlap -- use with caution
     For each bin:
       - compute union of all repeat intervals
       - define unannotated = bin_size - union_size
@@ -195,11 +202,13 @@ def bin_intervals_dominant(df, taxonomy_col, bin_size):
         # Clip intervals to bin
         clipped = clip_intervals_to_bin(window, taxonomy_col, bin_start, bin_end)
 
-        # ---- union of all repeat intervals ----
+        # ---- union of all repeat intervals to calculate unannotated bp ----
         all_intervals = [(s, e) for s, e, _ in clipped]
-        union = merge_intervals(all_intervals)
+        union = merge_intervals(all_intervals) ##
+        
         repeat_bp = sum(e - s for s, e in union)
         unannotated_bp = max(bin_size - repeat_bp, 0)
+
 
         # ---- compute unique bp per class (for dominance only) ----
         class_bp = defaultdict(int)
@@ -224,8 +233,91 @@ def bin_intervals_dominant(df, taxonomy_col, bin_size):
                 "taxonomy": dominant,
                 "coverage": repeat_bp
             })
+        #pdb.set_trace()
 
     return pd.DataFrame(records)
+
+def bin_intervals_repeat_composition(df, taxonomy_col, bin_size):
+    """
+    Bin intervals and represent repeat composition proportionally within
+    the repeat-covered portion of each bin.
+
+    For each bin:
+      1. Compute union of all repeat intervals → repeat_bp
+      2. Define unannotated = bin_size - repeat_bp
+      3. Compute per-class annotated bp (overlaps allowed)
+      4. Project class annotation space onto repeat space proportionally
+
+    NOTE:
+    - RepeatMasker annotations may overlap.
+    - Per-class bp are computed independently.
+    - Class contributions are normalized within annotation space and
+      scaled to repeat space.
+    """
+    max_pos = df["end"].max()
+    bins = range(0, max_pos + bin_size, bin_size)
+    records = []
+
+    for bin_start in bins:
+        bin_end = bin_start + bin_size
+
+        window = df[(df.start < bin_end) & (df.end > bin_start)]
+        if window.empty:
+            records.append({
+                "bin_start": bin_start,
+                "bin_end": bin_end,
+                "taxonomy": "Unannotated",
+                "coverage": bin_size
+            })
+            continue
+
+        # ---- clip intervals to bin ----
+        clipped = clip_intervals_to_bin(
+            window,
+            taxonomy_col,
+            bin_start,
+            bin_end
+        )
+        # clipped: List[(start, end, class)]
+
+        # ---- union of all repeat intervals ----
+        all_intervals = [(s, e) for s, e, _ in clipped]
+        union = merge_intervals(all_intervals)
+
+        repeat_bp = sum(e - s for s, e in union)
+        unannotated_bp = max(bin_size - repeat_bp, 0)
+
+        # ---- compute per-class annotated bp (annotation space) ----
+        class_bp = defaultdict(int)
+        for cls in set(c for _, _, c in clipped):
+            cls_intervals = [(s, e) for s, e, c in clipped if c == cls]
+            cls_union = merge_intervals(cls_intervals)
+            class_bp[cls] = sum(e - s for s, e in cls_union)
+
+        annotation_bp = sum(class_bp.values())
+
+        # ---- emit unannotated ----
+        records.append({
+            "bin_start": bin_start,
+            "bin_end": bin_end,
+            "taxonomy": "Unannotated",
+            "coverage": unannotated_bp
+        })
+
+        # ---- project annotation space → repeat space ----
+        if repeat_bp > 0 and annotation_bp > 0:
+            for cls, cls_bp in class_bp.items():
+                scaled_bp = (cls_bp / annotation_bp) * repeat_bp
+                if scaled_bp > 0:
+                    records.append({
+                        "bin_start": bin_start,
+                        "bin_end": bin_end,
+                        "taxonomy": cls,
+                        "coverage": scaled_bp
+                    })
+
+    return pd.DataFrame(records)
+
 
 
 def run_from_cli(args):
