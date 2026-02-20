@@ -1,5 +1,5 @@
 import argparse
-from . import normalize, rm_track, plot_multi, agp_track, depth_track, plot_panel
+from . import normalize, rm_track, plot_multi, agp_track, depth_track, plot_panel, plot_main
 
 def main():
     parser = argparse.ArgumentParser(
@@ -26,6 +26,13 @@ def main():
     parser_multi.add_argument("--taxonomy", default="class")
     parser_multi.add_argument("--bin-size", type=int, required=True)
     parser_multi.add_argument("--out", required=True)
+
+    parser_main = subparsers.add_parser("plot-main")
+    parser_main.add_argument("--main", nargs='+', required=True)
+    parser_main.add_argument("--rm", required=True)
+    parser_main.add_argument("--taxonomy", default="class")
+    parser_main.add_argument("--bin-size", default = 50_000, type=int, required=False)
+    parser_main.add_argument("--out", required=True)
 
     parser_agp = subparsers.add_parser("agp-track")
     parser_agp.add_argument("--agp", required=True)
@@ -62,3 +69,5 @@ def main():
         depth_track.run_from_cli(args)
     elif args.command == "panel":
         plot_panel.run_from_cli(args)
+    elif args.command == "plot-main":
+        plot_main.run_from_cli(args)

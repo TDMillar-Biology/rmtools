@@ -10,12 +10,14 @@ from collections import defaultdict
 from matplotlib.patches import Patch
 from matplotlib import ticker as mticker
 from .universal import parse_region
-import pdb
 
-def load_data(path: Path, contig: str):
+
+def load_data(path: Path, contig = None):
     df = pd.read_csv(path, sep="\t")
-    print(f'Loaded data from {path}. Dataframe shape: {df.shape}')
-    return df[df["chrom"] == contig].sort_values("start")
+    if contig:
+        return df[df["chrom"] == contig].sort_values("start")
+    else:
+        return df.sort_values("start")
 
 
 def choose_taxonomy(df, level):

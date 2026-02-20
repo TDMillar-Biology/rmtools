@@ -26,7 +26,6 @@ from .universal import parse_region
 
 def load_control_file(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path, delim_whitespace=True)
-    print(df)
     required = {"path", "contig", "label"}
     missing = required - set(df.columns)
     if missing:
