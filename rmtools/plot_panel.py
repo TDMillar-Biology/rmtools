@@ -99,6 +99,7 @@ def plot_panel(
 
     for i, track in enumerate(tracks):
         ax = fig.add_subplot(gs[i, 0], sharex=axes[0] if axes else None)
+
         axes.append(ax)
         ax_map[track] = ax
 
@@ -154,6 +155,12 @@ def plot_panel(
     # --------------------------------------------------------
     # Axis formatting
     # --------------------------------------------------------
+    axes[0].set_title(
+        contig,
+        loc="left",
+        fontsize=12,
+        fontweight="bold"
+        )
     axes[-1].set_xlabel("Genomic position (Mb)")
     axes[-1].xaxis.set_major_formatter(
         mticker.FuncFormatter(lambda x, _: f"{x / 1e6:.1f}")

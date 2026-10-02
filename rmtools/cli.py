@@ -1,5 +1,5 @@
 import argparse
-from . import normalize, rm_track, plot_multi, agp_track, depth_track, plot_panel, plot_main
+from . import normalize, rm_track, plot_multi, agp_track, depth_track, plot_panel, plot_main, size, plot_assembly, plot_compare
 
 def main():
     parser = argparse.ArgumentParser(
@@ -54,6 +54,27 @@ def main():
     parser_panel.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
     parser_panel.add_argument("--rm-bin", type=int, default=50_000)
     parser_panel.add_argument("--depth-bin", type=int, default=10_000)
+
+    parser_assembly = subparsers.add_parser("plot-assembly")
+    parser_assembly.add_argument("--main", nargs="+", required=True)
+    parser_assembly.add_argument("--rm")
+    parser_assembly.add_argument("--depth")
+    parser_assembly.add_argument("--agp")
+    parser_assembly.add_argument("--taxonomy", default="class")
+    parser_assembly.add_argument("--rm-bin", type=int, default=50_000)
+    parser_assembly.add_argument("--depth-bin", type=int, default=10_000)
+    parser_assembly.add_argument("--out", required=True)
+
+    parser_compare = subparsers.add_parser("plot-compare",help="Compare multiple strains across contigs")
+    parser_compare.add_argument("--control",required=True,help="TSV listing strain, rm, depth, agp files")
+    parser_compare.add_argument("--contigs",nargs="+",required=True,help="Contigs to plot (e.g. chr2L chr2R chr3L)")
+    parser_compare.add_argument("--taxonomy",default="class",choices=["class", "family", "name"])
+    parser_compare.add_argument("--rm-bin",type=int,default=50_000)
+    parser_compare.add_argument("--depth-bin",type=int,default=10_000)
+    parser_compare.add_argument("--out-prefix",required=True)
+
+    parser_size = subparsers.add_parser("size")
+    parser_size.add_argument("--rm", required=True)
     
     args = parser.parse_args()
 
@@ -71,3 +92,9 @@ def main():
         plot_panel.run_from_cli(args)
     elif args.command == "plot-main":
         plot_main.run_from_cli(args)
+    elif args.command == "size":
+        size.run_from_cli(args)
+    elif args.command == "plot-assembly":
+        plot_assembly.run_from_cli(args)
+    elif args.command == "plot-compare":
+        plot_compare.run_from_cli(args)

@@ -12,7 +12,7 @@ from matplotlib import ticker as mticker
 from .rm_track import (
     load_data,
     choose_taxonomy,
-    bin_intervals_dominant,
+    bin_intervals_repeat_composition,
     plot_binned,
     make_color_map,
     add_legend,
@@ -90,10 +90,8 @@ def plot_multi(
         categories = taxonomy_col.unique()
         color_map = make_color_map(categories)
 
-        binned = bin_intervals_dominant(df, taxonomy_col, bin_size)
+        binned = bin_intervals_repeat_composition(df, taxonomy_col, bin_size)
         plot_binned(binned, ax, color_map)
-
-        
 
         # Track-style label
         ax.set_ylabel(row.label, rotation=0, ha="right", va="center")
