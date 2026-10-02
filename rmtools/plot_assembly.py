@@ -4,6 +4,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from .plot_panel import plot_panel
+from .rm_track import load_data, choose_taxonomy, make_color_map
+from .universal import load_sizes
 
 
 def run_from_cli(args):
@@ -21,7 +23,14 @@ def run_from_cli(args):
 
     tracks_per_contig = len(tracks)
 
-    total_rows = len(contigs) * tracks_per_contig
+    if not tracks:
+        raise ValueError("At least one of --rm, --depth, or --agp must be provided")
+    sizes = load_sizes(getattr(args, "sizes", None))
+    color_map = None
+    if args.rm:
+        df = load_data(Path(args.rm))
+        df = df[df.chrom.isin(contigs)]
+        color_map = make_color_map(choose_taxonomy(df, args.taxonomy).unique())
 
     fig = plt.figure(figsize=(12, len(contigs) * 4))
 
@@ -44,7 +53,8 @@ def run_from_cli(args):
         panel_spec = gs_outer[i]
 
         panel_gs = panel_spec.subgridspec(
-            3, 1   # max possible tracks
+            tracks_per_contig, 1,
+            height_ratios=[{"rm": 3, "depth": 2, "agp": 1}[t] for t in tracks]
         )
 
         plot_panel(
@@ -56,7 +66,9 @@ def run_from_cli(args):
             rm_bin_size=args.rm_bin,
             depth_bin_size=args.depth_bin,
             fig=fig,
-            gs=panel_gs
+            gs=panel_gs,
+            rm_color_map=color_map,
+            contig_length=sizes.get(contig)
         )
 
     plt.savefig(args.out, dpi=300, bbox_inches="tight")

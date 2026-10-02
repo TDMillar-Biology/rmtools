@@ -19,7 +19,7 @@ from .rm_track import (
     plot_raw_intervals
 )
 
-from .universal import parse_region
+from .universal import load_sizes
 
 def run_from_cli(args):
     df = load_data(Path(args.rm))
@@ -35,8 +35,10 @@ def run_from_cli(args):
     if number_plots == 1:
         axes = [axes]
 
-    # Determine common genomic extent
-    max_pos = df[df["chrom"].isin(args.main)]["end"].max()
+    sizes = load_sizes(getattr(args, "sizes", None))
+    selected = df[df["chrom"].isin(args.main)]
+    max_pos = max([sizes.get(c, 0) for c in args.main] +
+                  ([int(selected.end.max())] if not selected.empty else [0]))
 
     for i, contig in enumerate(args.main):
         sub = df[df["chrom"] == contig]
@@ -46,7 +48,7 @@ def run_from_cli(args):
             plot_raw_intervals(sub, taxonomy_col, ax, color_map)
         else:
             binned = bin_intervals_repeat_composition(
-                sub, taxonomy_col, args.bin_size
+                sub, taxonomy_col, args.bin_size, end=sizes.get(contig)
             )
             plot_binned(binned, ax, color_map)
 
@@ -59,7 +61,8 @@ def run_from_cli(args):
 
         ax.set_title(contig, loc="left", fontsize=10, fontweight="bold")
 
-        ax.set_xlim(0, max_pos)
+        if max_pos:
+            ax.set_xlim(0, max_pos)
 
     axes[-1].set_xlabel("Genomic position (Mb)")
 
@@ -67,3 +70,4 @@ def run_from_cli(args):
 
     plt.tight_layout()
     plt.savefig(args.out, dpi=300, bbox_inches="tight")
+    plt.close(fig)

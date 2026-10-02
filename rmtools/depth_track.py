@@ -9,7 +9,6 @@ for assembly diagnostics.
 
 from pathlib import Path
 import pandas as pd
-import numpy as np
 from matplotlib import pyplot as plt
 from .universal import parse_region
 
@@ -34,6 +33,8 @@ def load_depth(path: Path):
             "depth": int,
         }
     )
+    # samtools depth positions are one-based.
+    df["pos"] -= 1
     return df
 
 
@@ -44,7 +45,7 @@ def subset_depth(df, contig, start=None, end=None):
     sub = df[df["chrom"] == contig].copy()
 
     if start is not None:
-        sub = sub[(sub.pos >= start) & (sub.pos <= end)].copy()
+        sub = sub[(sub.pos >= start) & (sub.pos < end)].copy()
 
     return sub
 
@@ -59,6 +60,8 @@ def bin_depth(df, bin_size, statistic="mean"):
 
     statistic: mean | median | sum
     """
+    if bin_size <= 0:
+        raise ValueError("bin_size must be positive")
     df = df.copy()
     df["bin"] = df.pos // bin_size
 
@@ -125,7 +128,10 @@ def run_from_cli(args):
         ax,
         bin_size=args.bin_size,
         region_start=start,
+        rebase=False,
     )
+    if start is not None:
+        ax.set_xlim(start, end)
     ax.set_xlabel("Genomic position (bp)")
 
     plt.tight_layout()

@@ -42,30 +42,31 @@ def parse_repeatmasker_out(rm_out: Path) -> pd.DataFrame:
                 "repeat_name": parts[9],
                 "class_family": parts[10],
             })
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=[
+        "score", "perc_div", "perc_del", "perc_ins", "chrom",
+        "start_1based", "end_1based", "strand", "repeat_name", "class_family",
+    ])
 
 
 def normalize_rm(df: pd.DataFrame, strain: str) -> pd.DataFrame:
+    df = df.copy()
     ## zero based coordinate system
     df["start"] = df["start_1based"] - 1
     df["end"] = df["end_1based"]
 
     ## split taxonomy columns
-    taxonomy = df["class_family"].apply(
-        lambda x: pd.Series(split_class_family(x),
-                            index=["repeat_class", "repeat_family"])
-    )
-    df = pd.concat([df, taxonomy], axis=1)
+    taxonomy = [split_class_family(value) for value in df["class_family"]]
+    df["repeat_class"] = [cls for cls, fam in taxonomy]
+    df["repeat_family"] = [fam for cls, fam in taxonomy]
     df["strain"] = strain
 
     ## re-encode strandedness from +/C (compliment) to +/- (bed like)
     strand_map = {"+": "+", "C": "-"}
-    df['strand'] = df['strand'].apply(lambda x: strand_map[x])
-
-    if df["strand"].isna().any(): # check for failure (indication of malformed input)
-        bad = df.loc[df["strand"].isna(), "strand"].unique()
+    bad = df.loc[~df["strand"].isin(strand_map), "strand"].unique()
+    if len(bad):
         raise ValueError(f"Unexpected strand values in RM output: {bad}")
-    
+    df["strand"] = df["strand"].map(strand_map)
+
     norm = df[[
         "chrom",
         "start",

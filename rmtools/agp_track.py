@@ -47,6 +47,8 @@ def load_agp(path: Path):
         }
     )
 
+    # AGP object coordinates are one-based and inclusive.
+    df["obj_beg"] -= 1
     return df
 
 
@@ -111,11 +113,13 @@ def plot_agp_layers(
         if seg_start >= seg_end:
             continue  # nothing to plot
 
+        # Calculate width while both endpoints use genomic coordinates.
+        width = seg_end - seg_start
+
         # Optional rebasing so region_start -> 0
         if rebase and region_start is not None:
             seg_start -= region_start
 
-        width = seg_end - seg_start
         y = row.layer
 
         ax.broken_barh(
@@ -151,13 +155,14 @@ def run_from_cli(args):
         ax,
         region_start=start,
         region_end=end,
-        rebase=True,
+        rebase=False,
     )
 
+    if start is not None:
+        ax.set_xlim(start, end)
     ax.set_xlabel("Genomic position (bp)")
 
     plt.tight_layout()
     plt.savefig(args.out, dpi=300, bbox_inches="tight")
     plt.close(fig)
-
 

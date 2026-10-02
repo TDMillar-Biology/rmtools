@@ -10,7 +10,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib import ticker as mticker
 
-from .universal import parse_region
+from .universal import parse_region, load_sizes
 from .rm_track import (
     load_data as load_rm,
     choose_taxonomy,
@@ -38,6 +38,8 @@ def plot_panel(
     depth_bin_size=10_000,
     fig=None,
     gs=None,
+    rm_color_map=None,
+    contig_length=None,
 ):
     """
     Plot a multi-track diagnostic panel for a genomic region.
@@ -45,7 +47,8 @@ def plot_panel(
     Parameters
     ----------
     region : str
-        CHROM or CHROM:start-end
+        CHROM or CHROM:start-end. Tracks retain absolute genomic positions;
+        an explicit region fixes the shared x-axis to start/end.
     rm_path : Path or None
         RepeatMasker TSV
     depth_path : Path or None
@@ -103,31 +106,52 @@ def plot_panel(
         axes.append(ax)
         ax_map[track] = ax
 
+    rm_df = load_rm(Path(rm_path), contig) if rm_path else None
+    depth_df = load_depth(Path(depth_path)) if depth_path else None
+    agp_df = load_agp(Path(agp_path)) if agp_path else None
+    extent_end = end if end is not None else contig_length
+    if extent_end is None:
+        extents = []
+        if rm_df is not None and not rm_df.empty:
+            extents.append(int(rm_df.end.max()))
+        if depth_df is not None:
+            sub = subset_depth(depth_df, contig)
+            if not sub.empty:
+                extents.append(int(sub.pos.max()) + 1)
+        if agp_df is not None:
+            sub = subset_agp(agp_df, contig)
+            if not sub.empty:
+                extents.append(int(sub.obj_end.max()))
+        extent_end = max(extents) if extents else None
+
     # --------------------------------------------------------
     # RepeatMasker track
     # --------------------------------------------------------
     if rm_path:
-        df = load_rm(Path(rm_path), contig)
+        df = rm_df
 
         if start is not None:
             df = df[(df.end > start) & (df.start < end)].copy()
 
         taxonomy_col = choose_taxonomy(df, rm_taxonomy)
         categories = taxonomy_col.unique()
-        color_map = make_color_map(categories)
+        color_map = rm_color_map if rm_color_map is not None else make_color_map(categories)
 
-        binned = bin_intervals_repeat_composition(df, taxonomy_col, rm_bin_size)
+        binned = bin_intervals_repeat_composition(df, taxonomy_col, rm_bin_size, start=start, end=extent_end)
         plot_binned(binned, ax_map["rm"], color_map)
+        if df.empty:
+            ax_map["rm"].text(0.5, 0.5, "No repeat annotations",
+                              transform=ax_map["rm"].transAxes, ha="center")
 
         ax_map["rm"].set_ylabel("Repeats")
 
-        add_legend(ax_map["rm"], color_map, title="Repeat class")
+        add_legend(ax_map["rm"], color_map, title=f"Repeat {rm_taxonomy}")
 
     # --------------------------------------------------------
     # Depth track
     # --------------------------------------------------------
     if depth_path:
-        depth = load_depth(Path(depth_path))
+        depth = depth_df
         depth_sub = subset_depth(depth, contig, start, end)
 
         plot_depth(
@@ -135,13 +159,14 @@ def plot_panel(
             ax_map["depth"],
             bin_size=depth_bin_size,
             region_start=start,
+            rebase=False,
         )
 
     # --------------------------------------------------------
     # AGP track
     # --------------------------------------------------------
     if agp_path:
-        agp = load_agp(Path(agp_path))
+        agp = agp_df
         agp_sub = subset_agp(agp, contig, start, end)
 
         plot_agp_layers(
@@ -149,12 +174,15 @@ def plot_panel(
             ax_map["agp"],
             region_start=start,
             region_end=end,
-            rebase=True,
+            rebase=False,
         )
 
     # --------------------------------------------------------
     # Axis formatting
     # --------------------------------------------------------
+    if extent_end is not None:
+        axes[0].set_xlim(0 if start is None else start, extent_end)
+
     axes[0].set_title(
         contig,
         loc="left",
@@ -182,6 +210,7 @@ def run_from_cli(args):
         rm_taxonomy=args.taxonomy,
         rm_bin_size=args.rm_bin,
         depth_bin_size=args.depth_bin,
+        contig_length=load_sizes(getattr(args, "sizes", None)).get(parse_region(args.region)[0]),
     )
 
 

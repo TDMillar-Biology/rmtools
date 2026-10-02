@@ -1,4 +1,5 @@
 import argparse
+from .universal import positive_int
 from . import normalize, rm_track, plot_multi, agp_track, depth_track, plot_panel, plot_main, size, plot_assembly, plot_compare
 
 def main():
@@ -18,20 +19,20 @@ def main():
     plot.add_argument("--rm", required=True)
     plot.add_argument("--region", required=True)
     plot.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
-    plot.add_argument("--bin-size", type=int, default=None)
+    plot.add_argument("--bin-size", type=positive_int, default=None)
     plot.add_argument("--out", required=True)
 
     parser_multi = subparsers.add_parser("plot-multi")
     parser_multi.add_argument("--control", required=True)
-    parser_multi.add_argument("--taxonomy", default="class")
-    parser_multi.add_argument("--bin-size", type=int, required=True)
+    parser_multi.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
+    parser_multi.add_argument("--bin-size", type=positive_int, required=True)
     parser_multi.add_argument("--out", required=True)
 
     parser_main = subparsers.add_parser("plot-main")
     parser_main.add_argument("--main", nargs='+', required=True)
     parser_main.add_argument("--rm", required=True)
-    parser_main.add_argument("--taxonomy", default="class")
-    parser_main.add_argument("--bin-size", default = 50_000, type=int, required=False)
+    parser_main.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
+    parser_main.add_argument("--bin-size", default = 50_000, type=positive_int, required=False)
     parser_main.add_argument("--out", required=True)
 
     parser_agp = subparsers.add_parser("agp-track")
@@ -43,7 +44,7 @@ def main():
     parser_depth.add_argument("--depth", required=True)
     parser_depth.add_argument("--region", required=True)
     parser_depth.add_argument("--out", required=True)
-    parser_depth.add_argument("--bin-size", type=int, default=10_000)
+    parser_depth.add_argument("--bin-size", type=positive_int, default=10_000)
 
     parser_panel = subparsers.add_parser("panel")
     parser_panel.add_argument("--rm", required=False)
@@ -52,30 +53,33 @@ def main():
     parser_panel.add_argument("--region", required=True)
     parser_panel.add_argument("--out", required=True)
     parser_panel.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
-    parser_panel.add_argument("--rm-bin", type=int, default=50_000)
-    parser_panel.add_argument("--depth-bin", type=int, default=10_000)
+    parser_panel.add_argument("--rm-bin", type=positive_int, default=50_000)
+    parser_panel.add_argument("--depth-bin", type=positive_int, default=10_000)
 
     parser_assembly = subparsers.add_parser("plot-assembly")
     parser_assembly.add_argument("--main", nargs="+", required=True)
     parser_assembly.add_argument("--rm")
     parser_assembly.add_argument("--depth")
     parser_assembly.add_argument("--agp")
-    parser_assembly.add_argument("--taxonomy", default="class")
-    parser_assembly.add_argument("--rm-bin", type=int, default=50_000)
-    parser_assembly.add_argument("--depth-bin", type=int, default=10_000)
+    parser_assembly.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
+    parser_assembly.add_argument("--rm-bin", type=positive_int, default=50_000)
+    parser_assembly.add_argument("--depth-bin", type=positive_int, default=10_000)
     parser_assembly.add_argument("--out", required=True)
 
     parser_compare = subparsers.add_parser("plot-compare",help="Compare multiple strains across contigs")
     parser_compare.add_argument("--control",required=True,help="TSV listing strain, rm, depth, agp files")
     parser_compare.add_argument("--contigs",nargs="+",required=True,help="Contigs to plot (e.g. chr2L chr2R chr3L)")
     parser_compare.add_argument("--taxonomy",default="class",choices=["class", "family", "name"])
-    parser_compare.add_argument("--rm-bin",type=int,default=50_000)
-    parser_compare.add_argument("--depth-bin",type=int,default=10_000)
+    parser_compare.add_argument("--rm-bin",type=positive_int,default=50_000)
+    parser_compare.add_argument("--depth-bin",type=positive_int,default=10_000)
     parser_compare.add_argument("--out-prefix",required=True)
 
     parser_size = subparsers.add_parser("size")
     parser_size.add_argument("--rm", required=True)
     
+    for command_parser in (plot, parser_main, parser_panel, parser_assembly):
+        command_parser.add_argument("--sizes", help="Contig lengths TSV or FASTA .fai")
+
     args = parser.parse_args()
 
     if args.command == "normalize":

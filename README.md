@@ -32,7 +32,18 @@ Examples:
     X
     X:30000000-35000000
 
-Coordinates are interpreted in assembly coordinate space. Plots are clipped to the requested region, and tracks within a panel share the same x-axis.
+Regions use zero-based, half-open coordinates: X:100-200 includes bases [100, 200).
+RepeatMasker normalization converts query coordinates to this convention. AGP
+object coordinates and samtools depth positions are converted when loaded.
+Single-contig and panel plots retain absolute genomic coordinates and are clipped
+to the requested region. Tracks within a panel share the same x-axis.
+
+For repeat-only whole-contig plots, supply --sizes assembly.fasta.fai (or a
+whitespace-separated contig/length file) to show unannotated chromosome tails.
+Without sizes, extent is inferred from the available track data; RepeatMasker
+annotations alone do not establish the true assembly length.
+--sizes is supported by plot-contig, plot-main, panel, and plot-assembly.
+Batch control files may provide a sizes column with a per-assembly size-file path.
 
 ---
 
@@ -50,6 +61,10 @@ Available commands:
 - agp-track
 - depth-track
 - panel
+- plot-main
+- plot-assembly
+- plot-compare
+- size
 
 ---
 
@@ -106,6 +121,7 @@ Example:
       --region X_RagTag \
       --out agp.pdf
 
+AGP W components are converted to zero-based, half-open intervals on load.
 Each W component is plotted on its own horizontal layer. Gaps are implicit, making scaffold joins and structure easy to inspect.
 
 ---
@@ -165,7 +181,17 @@ This panel is intended for rapid assembly sanity checking by visualizing sequenc
 
 BATCH PLOTTING
 
-The plot-multi command supports batch plotting using a control file (interface subject to refinement).
+The plot-multi command takes a whitespace-separated control file with path,
+contig, and label columns. contig may be a whole contig or an explicit region.
+An optional sizes column supplies a contig-length TSV or FASTA .fai for each row.
+Tracks start at contig coordinate zero, or the requested region start; leading
+unannotated sequence is retained. All tracks use one shared taxonomy color map.
+
+Example control file:
+
+    path                 contig           label
+    assembly1.rm.tsv     X                assembly1
+    assembly2.rm.tsv     X:100000-500000   assembly2
 
 Example:
 
@@ -197,3 +223,36 @@ The focus is on correctness, interpretability, and reproducibility rather than l
 
 
 
+
+REPEAT SUMMARY MODES
+
+plot-contig with --bin-size assigns the union of repeat-covered bases in each
+bin to the dominant taxonomy category. It does not display minority classes.
+Other binned repeat plots use proportional composition: per-class union lengths
+are scaled to the total repeat-covered union length. This keeps total coverage
+within the bin width but does not assign overlapping bases exclusively to a
+class. Dominance ties are resolved by sorted taxonomy name.
+Partial bins use their actual width, and no extra bin is emitted after the end.
+An explicit region with no repeat annotations is shown as unannotated.
+
+ADDITIONAL COMMANDS
+
+plot-main --rm annotations.tsv --main X 2L 2R --sizes assembly.fasta.fai --out main.pdf
+plot-assembly --rm annotations.tsv --depth depth.tsv --agp scaffolds.agp --main X 2L --out assembly.pdf
+plot-compare --control compare.tsv --contigs X 2L --out-prefix comparison
+size --rm annotations.tsv
+
+plot-compare expects a tab-separated control file with strain and any subset of
+rm, depth, and agp columns. Blank optional paths are allowed. Each strain must
+provide at least one track. Optional sizes paths specify assembly lengths.
+Within each contig comparison, strains share taxonomy colors and x-axis limits.
+size opens an interactive histogram of repeat interval lengths.
+
+REGRESSION CHECKS
+
+From the project directory after installation:
+
+    python -m unittest discover -s tests -v
+
+These checks use synthetic inputs and cover coordinate boundaries, rebasing,
+repeat overlap accounting, empty inputs, shared colors, and plotting CLI commands.
