@@ -1,12 +1,21 @@
 import argparse
 from .universal import positive_int
 from . import normalize, rm_track, plot_multi, agp_track, depth_track, plot_panel, plot_main, size, plot_assembly, plot_compare
+from importlib.metadata import version
+
 
 def main():
     parser = argparse.ArgumentParser(
         prog="rmtools",
         description="RepeatMasker normalization and plotting tools"
     )
+
+    parser.add_argument(
+        "--version", "-v",
+        action="version",
+        version=f"%(prog)s {version('rmtools')}",
+    )
+    
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     norm = subparsers.add_parser("normalize", help="Normalize RepeatMasker .out")
@@ -21,12 +30,22 @@ def main():
     plot.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
     plot.add_argument("--bin-size", type=positive_int, default=None)
     plot.add_argument("--out", required=True)
+    plot.add_argument(
+        "--unannotated-color",
+        default="#E6E6E6",
+        help="Color for unannotated sequence (default: #E6E6E6)"
+    )
 
     parser_multi = subparsers.add_parser("plot-multi")
     parser_multi.add_argument("--control", required=True)
     parser_multi.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
     parser_multi.add_argument("--bin-size", type=positive_int, required=True)
     parser_multi.add_argument("--out", required=True)
+    parser_multi.add_argument.add_argument(
+        "--unannotated-color",
+        default="#E6E6E6",
+        help="Color for unannotated sequence (default: #E6E6E6)"
+    )
 
     parser_main = subparsers.add_parser("plot-main")
     parser_main.add_argument("--main", nargs='+', required=True)
@@ -34,6 +53,11 @@ def main():
     parser_main.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
     parser_main.add_argument("--bin-size", default = 50_000, type=positive_int, required=False)
     parser_main.add_argument("--out", required=True)
+    parser_main.add_argument(
+        "--unannotated-color",
+        default="#E6E6E6",
+        help="Color for unannotated sequence (default: #E6E6E6)"
+    )
 
     parser_agp = subparsers.add_parser("agp-track")
     parser_agp.add_argument("--agp", required=True)
@@ -55,6 +79,11 @@ def main():
     parser_panel.add_argument("--taxonomy", choices=["class", "family", "name"], default="class")
     parser_panel.add_argument("--rm-bin", type=positive_int, default=50_000)
     parser_panel.add_argument("--depth-bin", type=positive_int, default=10_000)
+    parser_panel.add_argument(
+        "--unannotated-color",
+        default="#E6E6E6",
+        help="Color for unannotated sequence (default: #E6E6E6)"
+    )
 
     parser_assembly = subparsers.add_parser("plot-assembly")
     parser_assembly.add_argument("--main", nargs="+", required=True)
@@ -65,6 +94,11 @@ def main():
     parser_assembly.add_argument("--rm-bin", type=positive_int, default=50_000)
     parser_assembly.add_argument("--depth-bin", type=positive_int, default=10_000)
     parser_assembly.add_argument("--out", required=True)
+    parser_assembly.add_argument(
+        "--unannotated-color",
+        default="#E6E6E6",
+        help="Color for unannotated sequence (default: #E6E6E6)"
+    )
 
     parser_compare = subparsers.add_parser("plot-compare",help="Compare multiple strains across contigs")
     parser_compare.add_argument("--control",required=True,help="TSV listing strain, rm, depth, agp files")
@@ -73,6 +107,11 @@ def main():
     parser_compare.add_argument("--rm-bin",type=positive_int,default=50_000)
     parser_compare.add_argument("--depth-bin",type=positive_int,default=10_000)
     parser_compare.add_argument("--out-prefix",required=True)
+    parser_compare.add_argument(
+        "--unannotated-color",
+        default="#E6E6E6",
+        help="Color for unannotated sequence (default: #E6E6E6)"
+    )
 
     parser_size = subparsers.add_parser("size")
     parser_size.add_argument("--rm", required=True)

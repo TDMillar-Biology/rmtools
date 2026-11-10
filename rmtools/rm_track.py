@@ -85,15 +85,15 @@ def add_legend(ax, color_map, title="Repeat class"):
         frameon=False
     )
 
-def make_color_map(categories, cmap=plt.cm.tab20):
+def make_color_map(categories, cmap=plt.cm.tab20,
+                   unannotated_color="#E6E6E6"):
     """
     Assign a consistent color to each taxonomy category.
     """
     categories = sorted(set(categories) - {"Unannotated"})
     color_map = {cat: cmap(i % cmap.N) for i, cat in enumerate(categories)}
-    color_map["Unannotated"] = '#E6E6E6' ## just off white
+    color_map["Unannotated"] = unannotated_color
     return color_map
-
 
 def merge_intervals(intervals):
     """
@@ -207,7 +207,7 @@ def run_from_cli(args):
     taxonomy_col = choose_taxonomy(df, args.taxonomy)
 
     categories = taxonomy_col.unique()
-    color_map = make_color_map(categories)
+    color_map = make_color_map(categories, unannotated_color=args.unannotated_color)
 
     fig, ax = plt.subplots(figsize=(12, 2))
 
